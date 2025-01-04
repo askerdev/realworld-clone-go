@@ -1,0 +1,17 @@
+meta {
+  name: Follow Profile
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{APIURL}}/profiles/celeb_{{USERNAME}}/follow
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

@@ -1,0 +1,43 @@
+meta {
+  name: Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{APIURL}}/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+}
+
+body:json {
+  {
+    "user": {
+      "email": "{{EMAIL}}",
+      "password": "{{PASSWORD}}",
+      "username": "{{USERNAME}}"
+    }
+  }
+}
+
+tests {
+  // if (!(environment.isIntegrationTest)) {
+  // var responseJSON = JSON.parse(responseBody);
+  
+  // test("Response contains "user" property", function() { expect(Boolean(responseJSON.hasOwnProperty('user'))).to.be.true; });
+  
+  // var user = responseJSON.user || {};
+  
+  // test("User has "email" property", function() { expect(Boolean(user.hasOwnProperty('email'))).to.be.true; });
+  // test("User has "username" property", function() { expect(Boolean(user.hasOwnProperty('username'))).to.be.true; });
+  // test("User has "bio" property", function() { expect(Boolean(user.hasOwnProperty('bio'))).to.be.true; });
+  // test("User has "image" property", function() { expect(Boolean(user.hasOwnProperty('image'))).to.be.true; });
+  // test("User has "token" property", function() { expect(Boolean(user.hasOwnProperty('token'))).to.be.true; });
+  // }
+  
+}

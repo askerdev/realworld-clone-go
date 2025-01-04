@@ -1,0 +1,17 @@
+meta {
+  name: Unfollow Profile
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{APIURL}}/profiles/celeb_{{USERNAME}}/follow
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

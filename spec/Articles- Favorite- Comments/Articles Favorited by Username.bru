@@ -1,0 +1,21 @@
+meta {
+  name: Articles Favorited by Username
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{APIURL}}/articles?favorited={{USERNAME}}
+  body: json
+  auth: none
+}
+
+params:query {
+  favorited: {{USERNAME}}
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

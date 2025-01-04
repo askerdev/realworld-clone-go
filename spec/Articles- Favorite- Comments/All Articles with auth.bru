@@ -1,0 +1,17 @@
+meta {
+  name: All Articles with auth
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{APIURL}}/articles
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

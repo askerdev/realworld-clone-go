@@ -1,0 +1,32 @@
+meta {
+  name: Create Article
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{APIURL}}/articles
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}
+
+body:json {
+  {
+    "article": {
+      "title": "How to train your dragon",
+      "description": "Ever wonder how?",
+      "body": "Very carefully.",
+      "tagList": [
+        "training",
+        "dragons",
+        "movies"
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Articles by Tag
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{APIURL}}/articles?tag=dragons
+  body: json
+  auth: none
+}
+
+params:query {
+  tag: dragons
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+}

@@ -1,0 +1,17 @@
+meta {
+  name: All Comments for Article
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{APIURL}}/articles/{{slug}}/comments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

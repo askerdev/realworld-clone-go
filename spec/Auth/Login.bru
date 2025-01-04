@@ -1,0 +1,29 @@
+meta {
+  name: Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{APIURL}}/users/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+}
+
+body:json {
+  {
+    "user": {
+      "email": "{{EMAIL}}",
+      "password": "{{PASSWORD}}"
+    }
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("token", res.body.user.token)
+}

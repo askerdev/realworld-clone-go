@@ -1,0 +1,21 @@
+meta {
+  name: Articles by Tag
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{APIURL}}/articles?tag=training
+  body: json
+  auth: none
+}
+
+params:query {
+  tag: training
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

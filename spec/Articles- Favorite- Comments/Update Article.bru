@@ -1,0 +1,21 @@
+meta {
+  name: Update Article
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{APIURL}}/articles/{{slug}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}
+
+body:json {
+  {"article":{"body":"With two hands"}}
+}

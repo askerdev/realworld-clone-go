@@ -1,0 +1,17 @@
+meta {
+  name: Current User
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{APIURL}}/user
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

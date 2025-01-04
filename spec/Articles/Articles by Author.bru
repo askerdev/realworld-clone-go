@@ -1,0 +1,20 @@
+meta {
+  name: Articles by Author
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{APIURL}}/articles?author=johnjacob
+  body: json
+  auth: none
+}
+
+params:query {
+  author: johnjacob
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+}

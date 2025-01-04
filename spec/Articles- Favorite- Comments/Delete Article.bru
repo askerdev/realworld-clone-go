@@ -1,0 +1,17 @@
+meta {
+  name: Delete Article
+  type: http
+  seq: 18
+}
+
+delete {
+  url: {{APIURL}}/articles/{{slug}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

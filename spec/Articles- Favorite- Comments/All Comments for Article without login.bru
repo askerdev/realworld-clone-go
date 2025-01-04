@@ -1,0 +1,16 @@
+meta {
+  name: All Comments for Article without login
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{APIURL}}/articles/{{slug}}/comments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+}

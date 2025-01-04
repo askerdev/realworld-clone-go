@@ -1,0 +1,17 @@
+meta {
+  name: Favorite Article
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{APIURL}}/articles/{{slug}}/favorite
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

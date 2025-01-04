@@ -1,0 +1,21 @@
+meta {
+  name: Create Comment for Article
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{APIURL}}/articles/{{slug}}/comments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}
+
+body:json {
+  {"comment":{"body":"Thank you so much!"}}
+}

@@ -1,0 +1,17 @@
+meta {
+  name: Delete Comment for Article
+  type: http
+  seq: 17
+}
+
+delete {
+  url: {{APIURL}}/articles/{{slug}}/comments/{{commentId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

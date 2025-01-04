@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL  PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  username TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  bio TEXT NOT NULL DEFAULT '',
+  image TEXT
+);

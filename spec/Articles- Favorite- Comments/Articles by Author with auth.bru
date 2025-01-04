@@ -1,0 +1,23 @@
+meta {
+  name: Articles by Author with auth
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{APIURL}}/articles?author={{USERNAME}}&limit=1&offset=1
+  body: json
+  auth: none
+}
+
+params:query {
+  author: {{USERNAME}}
+  limit: 1
+  offset: 1
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

@@ -1,0 +1,18 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main ./cmd/main.go "
+bin = "tmp/main"
+args_bin = ["keys/auth.ed", "keys/auth.ed.pub"]
+
+[color]
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[proxy]
+enabled = true
+proxy_port = 8090
+app_port = 8080

@@ -1,0 +1,16 @@
+meta {
+  name: All Tags
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{APIURL}}/tags
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Articles by Author
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{APIURL}}/articles?author={{USERNAME}}
+  body: json
+  auth: none
+}
+
+params:query {
+  author: {{USERNAME}}
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

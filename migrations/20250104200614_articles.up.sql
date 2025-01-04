@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS articles (
+  id BIGSERIAL PRIMARY KEY,
+  author_id BIGSERIAL NOT NULL REFERENCES users(id),
+  slug TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  body TEXT NOT NULL,
+  favorites_count BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+  value TEXT NOT NULL,
+  article_id BIGSERIAL NOT NULL REFERENCES articles(id)
+);

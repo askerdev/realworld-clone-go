@@ -1,0 +1,17 @@
+meta {
+  name: Single Article by slug
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{APIURL}}/articles/{{slug}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Requested-With: XMLHttpRequest
+  Authorization: Token {{token}}
+}

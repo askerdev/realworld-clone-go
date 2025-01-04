@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS comments (
+  id BIGSERIAL PRIMARY KEY,
+  body TEXT NOT NULL,
+  article_id BIGSERIAL NOT NULL REFERENCES articles(id),
+  author_id BIGSERIAL NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP
+);
