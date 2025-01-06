@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/askerdev/realworld-clone-go/internal/postgres"
+	"github.com/go-chi/chi/v5"
 	"github.com/gosimple/slug"
 	"github.com/guregu/null/v5"
 )
@@ -45,7 +46,7 @@ func (h *handler) createArticle(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		slog.Error(err.Error())
-		InternalServerError(w)
+		AlreayExistsError(w)
 		return
 	}
 
@@ -112,4 +113,138 @@ func (h *handler) listArticle(w http.ResponseWriter, r *http.Request) {
 	JSON(w, map[string]any{
 		"articles": articles,
 	})
+}
+
+func (h *handler) articleBySlug(w http.ResponseWriter, r *http.Request) {
+	slugString := chi.URLParam(r, "slug")
+	slug := null.NewString(slugString, len(slugString) > 0)
+
+	if !slug.Valid {
+		NotFoundError(w)
+		return
+	}
+
+	article, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+		Slug:  slug,
+		Limit: null.IntFrom(1),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			NotFoundError(w)
+			break
+		default:
+			InternalServerError(w)
+			break
+		}
+		return
+	}
+	if len(article) == 0 {
+		NotFoundError(w)
+		return
+	}
+
+	JSON(w, map[string]any{
+		"article": article[0],
+	})
+}
+
+type UpdateArticleRequestArticle struct {
+	Title       null.String `json:"title"`
+	Description null.String `json:"description"`
+	Body        null.String `json:"body"`
+}
+
+type UpdateArticleRequest struct {
+	Article UpdateArticleRequestArticle `json:"article"`
+}
+
+func (h *handler) updateArticle(w http.ResponseWriter, r *http.Request) {
+	slugString := chi.URLParam(r, "slug")
+	slugField := null.NewString(slugString, len(slugString) > 0)
+
+	var body UpdateArticleRequest
+	if err := ParseBody(r.Body, &body); err != nil {
+		InvalidJSON(w)
+		return
+	}
+
+	if !slugField.Valid {
+		NotFoundError(w)
+		return
+	}
+
+	var newSlug null.String
+	if body.Article.Title.Valid {
+		newSlug = null.StringFrom(slug.Make(body.Article.Title.String))
+	}
+
+	err := h.storage.UpdateArticle(r.Context(), &postgres.UpdateArticleParams{
+		OriginalSlug: slugField.String,
+		Slug:         newSlug,
+		Title:        body.Article.Title,
+		Description:  body.Article.Description,
+		Body:         body.Article.Body,
+	})
+
+	if err != nil {
+		InternalServerError(w)
+		return
+	}
+
+	if newSlug.Valid {
+		slugField = newSlug
+	}
+
+	article, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+		Slug:  slugField,
+		Limit: null.IntFrom(1),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			NotFoundError(w)
+			break
+		default:
+			InternalServerError(w)
+			break
+		}
+		return
+	}
+	if len(article) == 0 {
+		NotFoundError(w)
+		return
+	}
+
+	JSON(w, map[string]any{
+		"article": article[0],
+	})
+}
+
+func (h *handler) deleteArticle(w http.ResponseWriter, r *http.Request) {
+	slugString := chi.URLParam(r, "slug")
+	slug := null.NewString(slugString, len(slugString) > 0)
+
+	if !slug.Valid {
+		NotFoundError(w)
+		return
+	}
+
+	u := h.MustContextUser(r.Context())
+	err := h.storage.RemoveArticle(r.Context(), slug.String, u.ID)
+	if err != nil {
+		slog.Error(err.Error())
+		switch {
+		case errors.Is(err, postgres.ErrNotFound):
+			NotFoundError(w)
+			break
+		case errors.Is(err, sql.ErrNoRows):
+			NotFoundError(w)
+			break
+		default:
+			InternalServerError(w)
+			break
+		}
+		return
+	}
 }

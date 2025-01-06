@@ -5,15 +5,13 @@ meta {
 }
 
 get {
-  url: {{APIURL}}/articles?author={{USERNAME}}&limit=1&offset=1
-  body: json
+  url: {{APIURL}}/articles?author=celeb_{{USERNAME}}
+  body: none
   auth: none
 }
 
 params:query {
-  author: {{USERNAME}}
-  limit: 1
-  offset: 1
+  author: celeb_{{USERNAME}}
 }
 
 headers {

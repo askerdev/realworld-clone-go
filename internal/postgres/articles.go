@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 	"strings"
 
@@ -22,6 +23,11 @@ func (s *Storage) CreateArticle(
 	ctx context.Context,
 	params *CreateArticleParams,
 ) (*entity.Article, error) {
+	tx, err := s.db.BeginTxx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+
 	const insertArticleQuery = `
     INSERT INTO articles
       (slug, title, description, body, author_id)
@@ -29,7 +35,7 @@ func (s *Storage) CreateArticle(
       ($1, $2, $3, $4, $5)
     RETURNING *`
 
-	row := s.db.QueryRowxContext(
+	row := tx.QueryRowxContext(
 		ctx,
 		insertArticleQuery,
 		params.Slug, params.Title, params.Description,
@@ -37,16 +43,19 @@ func (s *Storage) CreateArticle(
 	)
 	articleRow := &ArticleRow{}
 	if err := row.StructScan(articleRow); err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
-	profile, err := s.SelectProfileByID(ctx, params.AuthorID, nil)
+	profile, err := s.selectProfileByID(ctx, tx, params.AuthorID, nil)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
-	err = s.InsertTags(ctx, articleRow.ID, params.TagList)
+	err = s.saveTags(ctx, tx, articleRow.ID, params.TagList)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -64,7 +73,98 @@ func (s *Storage) CreateArticle(
 		Favorited:      false,
 	}
 
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	return &article, nil
+}
+
+type UpdateArticleParams struct {
+	OriginalSlug string
+	Slug         null.String
+	Title        null.String
+	Description  null.String
+	Body         null.String
+}
+
+func (s *Storage) UpdateArticle(
+	ctx context.Context,
+	params *UpdateArticleParams,
+) error {
+	fields := []string{}
+	args := NewArgs()
+
+	if params.Title.Valid && params.Slug.Valid {
+		args.Append(params.Slug.String)
+		fields = append(fields, "slug = "+args.Placeholder)
+		args.Append(params.Title.String)
+		fields = append(fields, "title = "+args.Placeholder)
+	}
+
+	if params.Description.Valid {
+		args.Append(params.Description.String)
+		fields = append(fields, "description = "+args.Placeholder)
+	}
+
+	if params.Body.Valid {
+		args.Append(params.Body.String)
+		fields = append(fields, "body = "+args.Placeholder)
+	}
+
+	if len(fields) == 0 {
+		return nil
+	}
+
+	args.Append(params.OriginalSlug)
+
+	updateArticleQuery := `
+    UPDATE articles SET ` + strings.Join(fields, ", ") +
+		` WHERE slug = ` + args.Placeholder
+
+	res, err := s.db.ExecContext(
+		ctx,
+		updateArticleQuery,
+		args.Values...,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Storage) RemoveArticle(
+	ctx context.Context,
+	slug string,
+	authorID uint64,
+) error {
+	const query = `DELETE FROM articles CASCADE WHERE slug = $1 AND author_id = $2`
+
+	res, err := s.db.ExecContext(
+		ctx,
+		query,
+		slug, authorID,
+	)
+	if err != nil {
+		return err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
 }
 
 type SelectArticlesParams struct {
@@ -72,6 +172,7 @@ type SelectArticlesParams struct {
 	Tag                 null.String
 	AuthorUsername      null.String
 	FavoritedByUsername null.String
+	Slug                null.String
 	Limit               null.Int
 	Offset              null.Int
 }
@@ -90,11 +191,19 @@ func (s *Storage) SelectArticles(
 		subscriberJoin += " LEFT JOIN subscriptions s ON s.profile_id = author_id AND s.user_id = " + args.Placeholder + " "
 	}
 
+	if params.Slug.Valid {
+		args.Append(params.Slug.String)
+		where = append(where, `a.slug = `+args.Placeholder)
+	}
+
 	if params.Tag.Valid {
 		args.Append(params.Tag.String)
 		where = append(
 			where,
-			`id IN (SELECT article_id FROM tags WHERE value = `+args.Placeholder+")",
+			`a.id IN (
+        SELECT tar.article_id as article_id FROM tags
+        JOIN tags_articles_rel tar ON tar.tag_id = tags.id
+        WHERE value = `+args.Placeholder+")",
 		)
 	}
 
@@ -126,7 +235,7 @@ func (s *Storage) SelectArticles(
 	query := `
     SELECT
       t.value AS article_tag,
-      id, slug, title, description, body, favorites_count, created_at, updated_at, author_id,
+      a.id, a.slug, a.title, a.description, a.body, a.favorites_count, a.created_at, a.updated_at, a.author_id,
       u_user_id AS user_id, user_bio, user_username, user_image ` + selectFollowingSubscriber +
 		`FROM (
       SELECT 
@@ -135,8 +244,9 @@ func (s *Storage) SelectArticles(
       FROM articles a
       INNER JOIN users u ON u.id = a.author_id` + whereStart + strings.Join(where, " AND ") + `
       ORDER BY a.created_at DESC` + end + `
-    )
-    LEFT JOIN tags t ON t.article_id = id
+    ) a
+    LEFT JOIN tags_articles_rel tar ON tar.article_id = id
+    LEFT JOIN tags t ON tar.tag_id = t.id
     ` + subscriberJoin + ` ORDER BY created_at DESC`
 
 	rows, err := s.db.QueryxContext(ctx, query, args.Values...)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/askerdev/realworld-clone-go/internal/domain/entity"
 	"github.com/guregu/null/v5"
+	"github.com/jmoiron/sqlx"
 )
 
 func (r *Storage) InsertUser(
@@ -112,6 +113,32 @@ func (r *Storage) UnfollowProfile(
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
+	}
+
+	return p, nil
+}
+
+func (r *Storage) selectProfileByID(
+	ctx context.Context,
+	tx *sqlx.Tx,
+	profileID uint64,
+	userID *uint64,
+) (*entity.Profile, error) {
+	const selectProfileByIDQuery = `SELECT id, username, image, bio FROM users WHERE id = $1`
+
+	p := &entity.Profile{}
+	row := tx.QueryRowxContext(ctx, selectProfileByIDQuery, profileID)
+	if err := row.StructScan(p); err != nil {
+		return nil, err
+	}
+
+	if userID != nil {
+		const selectSubscription = `SELECT * FROM subscriptions WHERE user_id = $1 AND profile_id = $2`
+		sub := &SubscriptionRow{}
+		row = tx.QueryRowxContext(ctx, selectSubscription, *userID, profileID)
+		if err := row.StructScan(sub); err == nil {
+			p.Following = sub.UserID == *userID
+		}
 	}
 
 	return p, nil

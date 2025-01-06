@@ -91,3 +91,8 @@ func UnauthorizedError(w http.ResponseWriter) {
 	NewError("Unauthorized", http.StatusUnauthorized).
 		Write(w)
 }
+
+func AlreayExistsError(w http.ResponseWriter) {
+	NewError("resource already exists", http.StatusBadRequest).
+		Write(w)
+}

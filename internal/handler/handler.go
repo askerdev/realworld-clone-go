@@ -41,6 +41,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Post("/api/users/login", h.login)
 	m.Get("/api/profiles/{username}", h.profile)
 	m.Get("/api/articles", h.listArticle)
+	m.Get("/api/articles/{slug}", h.articleBySlug)
+	m.Get("/api/tags", h.listTags)
 
 	m.With(h.jwtMiddleware.HandleHTTP).
 		Group(func(r chi.Router) {
@@ -49,6 +51,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			r.Post("/api/profiles/{username}/follow", h.follow)
 			r.Delete("/api/profiles/{username}/follow", h.unfollow)
 			r.Post("/api/articles", h.createArticle)
+			r.Put("/api/articles/{slug}", h.updateArticle)
+			r.Delete("/api/articles/{slug}", h.deleteArticle)
 		})
 
 	m.ServeHTTP(w, r)
