@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS articles (
   body TEXT NOT NULL,
   favorites_count BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS tags (
@@ -17,5 +17,10 @@ CREATE TABLE IF NOT EXISTS tags (
 
 CREATE TABLE IF NOT EXISTS tags_articles_rel (
   tag_id BIGSERIAL NOT NULL REFERENCES tags(id),
+  article_id BIGSERIAL NOT NULL REFERENCES articles(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS favorites_articles_rel (
+  user_id BIGSERIAL NOT NULL REFERENCES users(id),
   article_id BIGSERIAL NOT NULL REFERENCES articles(id) ON DELETE CASCADE
 );

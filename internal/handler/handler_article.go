@@ -55,6 +55,57 @@ func (h *handler) createArticle(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *handler) feedArticles(w http.ResponseWriter, r *http.Request) {
+	var limit null.Int
+	var offset null.Int
+	limitString := r.URL.Query().Get("limit")
+	if len(limitString) > 0 {
+		limitInt, err := strconv.Atoi(limitString)
+		if err == nil && limitInt > 0 && limitInt <= 20 {
+			limit.Int64 = int64(limitInt)
+			limit.Valid = true
+		}
+	}
+	offsetString := r.URL.Query().Get("offset")
+	if len(offsetString) > 0 {
+		offsetInt, err := strconv.Atoi(offsetString)
+		if err == nil && offsetInt > 0 && offsetInt <= 20 {
+			offset.Int64 = int64(offsetInt)
+			offset.Valid = true
+		}
+	}
+
+	u := h.MustContextUser(r.Context())
+	articles, articlesCount, err := h.storage.SelectArticles(
+		r.Context(),
+		&postgres.SelectArticlesParams{
+			UserID: &u.ID,
+			Feed:   true,
+			Limit:  limit,
+			Offset: offset,
+		},
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			JSON(w, map[string]any{
+				"articles": []any{},
+			})
+			break
+		default:
+			slog.Error(err.Error())
+			InternalServerError(w)
+			break
+		}
+		return
+	}
+
+	JSON(w, map[string]any{
+		"articles":      articles,
+		"articlesCount": articlesCount,
+	})
+}
+
 func (h *handler) listArticle(w http.ResponseWriter, r *http.Request) {
 	var id *uint64
 	token, err := h.getHeaderToken(r.Header)
@@ -87,7 +138,7 @@ func (h *handler) listArticle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	articles, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+	articles, _, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
 		UserID:              id,
 		AuthorUsername:      null.NewString(author, len(author) > 0),
 		Tag:                 null.NewString(tag, len(tag) > 0),
@@ -111,7 +162,8 @@ func (h *handler) listArticle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSON(w, map[string]any{
-		"articles": articles,
+		"articles":      articles,
+		"articlesCount": len(articles),
 	})
 }
 
@@ -124,9 +176,19 @@ func (h *handler) articleBySlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
-		Slug:  slug,
-		Limit: null.IntFrom(1),
+	var id *uint64
+	token, err := h.getHeaderToken(r.Header)
+	if err == nil {
+		user, err := h.userFromToken(token)
+		if err == nil {
+			id = &user.ID
+		}
+	}
+
+	article, _, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+		UserID: id,
+		Slug:   slug,
+		Limit:  null.IntFrom(1),
 	})
 	if err != nil {
 		switch {
@@ -196,9 +258,11 @@ func (h *handler) updateArticle(w http.ResponseWriter, r *http.Request) {
 		slugField = newSlug
 	}
 
-	article, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
-		Slug:  slugField,
-		Limit: null.IntFrom(1),
+	u := h.MustContextUser(r.Context())
+	article, _, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+		UserID: &u.ID,
+		Slug:   slugField,
+		Limit:  null.IntFrom(1),
 	})
 	if err != nil {
 		switch {
@@ -247,4 +311,105 @@ func (h *handler) deleteArticle(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+}
+
+func (h *handler) favoriteArticle(w http.ResponseWriter, r *http.Request) {
+	slugString := chi.URLParam(r, "slug")
+	slug := null.NewString(slugString, len(slugString) > 0)
+
+	if !slug.Valid {
+		NotFoundError(w)
+		return
+	}
+
+	u := h.MustContextUser(r.Context())
+	article, _, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+		UserID: &u.ID,
+		Slug:   slug,
+		Limit:  null.IntFrom(1),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			NotFoundError(w)
+			break
+		default:
+			InternalServerError(w)
+			break
+		}
+		return
+	}
+	if len(article) == 0 {
+		NotFoundError(w)
+		return
+	}
+
+	if article[0].Favorited {
+		AlreayExistsError(w)
+		return
+	}
+
+	err = h.storage.FavoriteArticle(r.Context(), u.ID, article[0].ID)
+	if err != nil {
+		slog.Error(err.Error())
+		InternalServerError(w)
+		return
+	}
+
+	article[0].Favorited = true
+	article[0].FavoritesCount += 1
+
+	JSON(w, map[string]any{
+		"article": article[0],
+	})
+}
+
+func (h *handler) unfavoriteArticle(w http.ResponseWriter, r *http.Request) {
+	slugString := chi.URLParam(r, "slug")
+	slug := null.NewString(slugString, len(slugString) > 0)
+
+	if !slug.Valid {
+		NotFoundError(w)
+		return
+	}
+
+	u := h.MustContextUser(r.Context())
+	article, _, err := h.storage.SelectArticles(r.Context(), &postgres.SelectArticlesParams{
+		UserID: &u.ID,
+		Slug:   slug,
+		Limit:  null.IntFrom(1),
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			NotFoundError(w)
+			break
+		default:
+			InternalServerError(w)
+			break
+		}
+		return
+	}
+	if len(article) == 0 {
+		NotFoundError(w)
+		return
+	}
+
+	if !article[0].Favorited {
+		NotFoundError(w)
+		return
+	}
+
+	err = h.storage.UnfavoriteArticle(r.Context(), u.ID, article[0].ID)
+	if err != nil {
+		InternalServerError(w)
+		return
+	}
+
+	article[0].Favorited = false
+	article[0].FavoritesCount -= 1
+
+	JSON(w, map[string]any{
+		"article": article[0],
+	})
 }

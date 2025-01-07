@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/askerdev/realworld-clone-go/internal/domain/entity"
 	"github.com/guregu/null/v5"
@@ -59,7 +60,7 @@ func (s *Storage) CreateArticle(
 		return nil, err
 	}
 
-	article := entity.Article{
+	article := &entity.Article{
 		ID:             articleRow.ID,
 		Slug:           articleRow.Slug,
 		Title:          articleRow.Title,
@@ -77,7 +78,7 @@ func (s *Storage) CreateArticle(
 		return nil, err
 	}
 
-	return &article, nil
+	return article, nil
 }
 
 type UpdateArticleParams struct {
@@ -115,6 +116,9 @@ func (s *Storage) UpdateArticle(
 	if len(fields) == 0 {
 		return nil
 	}
+
+	args.Append(time.Now())
+	fields = append(fields, "updated_at = "+args.Placeholder)
 
 	args.Append(params.OriginalSlug)
 
@@ -169,6 +173,7 @@ func (s *Storage) RemoveArticle(
 
 type SelectArticlesParams struct {
 	UserID              *uint64
+	Feed                bool
 	Tag                 null.String
 	AuthorUsername      null.String
 	FavoritedByUsername null.String
@@ -180,15 +185,27 @@ type SelectArticlesParams struct {
 func (s *Storage) SelectArticles(
 	ctx context.Context,
 	params *SelectArticlesParams,
-) ([]*entity.Article, error) {
-	subscriberJoin := ""
+) ([]*entity.Article, uint, error) {
+	conditionalJoin := ""
+	authenticatedJoin := ""
 	end := ""
 	where := []string{}
 	args := NewArgs()
 
+	if params.FavoritedByUsername.Valid {
+		args.Append(params.FavoritedByUsername.String)
+		conditionalJoin += ` INNER JOIN favorites_articles_rel farbyu ON farbyu.article_id = a.id AND farbyu.user_id IN (
+      SELECT id FROM users WHERE username = ` + args.Placeholder + `)`
+	}
+
 	if params.UserID != nil {
 		args.Append(*params.UserID)
-		subscriberJoin += " LEFT JOIN subscriptions s ON s.profile_id = author_id AND s.user_id = " + args.Placeholder + " "
+		joinType := "LEFT"
+		if params.Feed {
+			joinType = "INNER"
+		}
+		authenticatedJoin += " " + joinType + " JOIN subscriptions s ON s.profile_id = author_id AND s.user_id = " + args.Placeholder + `
+      LEFT JOIN favorites_articles_rel far ON far.article_id = a.id AND far.user_id = ` + args.Placeholder
 	}
 
 	if params.Slug.Valid {
@@ -227,53 +244,69 @@ func (s *Storage) SelectArticles(
 		whereStart = " WHERE "
 	}
 
-	selectFollowingSubscriber := " "
-	if len(subscriberJoin) > 0 {
-		selectFollowingSubscriber = ", s.user_id AS subscriber_id "
+	authenticatedSelect := " "
+	if len(authenticatedJoin) > 0 {
+		authenticatedSelect += ", far.user_id AS favorited_by_id, s.user_id AS subscriber_id "
 	}
 
 	query := `
     SELECT
       t.value AS article_tag,
       a.id, a.slug, a.title, a.description, a.body, a.favorites_count, a.created_at, a.updated_at, a.author_id,
-      u_user_id AS user_id, user_bio, user_username, user_image ` + selectFollowingSubscriber +
+      u_user_id AS user_id, user_bio, user_username, user_image,
+      articles_count
+    ` + authenticatedSelect +
 		`FROM (
       SELECT 
         a.*,
-        u.id AS u_user_id, u.bio AS user_bio, u.username AS user_username, u.image AS user_image
+        u.id AS u_user_id, u.bio AS user_bio, u.username AS user_username, u.image AS user_image,
+        COUNT(a.*) AS articles_count
       FROM articles a
-      INNER JOIN users u ON u.id = a.author_id` + whereStart + strings.Join(where, " AND ") + `
+      INNER JOIN users u ON u.id = a.author_id ` + whereStart + strings.Join(where, " AND ") + `
+      GROUP BY a.id, u.id
       ORDER BY a.created_at DESC` + end + `
     ) a
     LEFT JOIN tags_articles_rel tar ON tar.article_id = id
     LEFT JOIN tags t ON tar.tag_id = t.id
-    ` + subscriberJoin + ` ORDER BY created_at DESC`
+    ` + conditionalJoin + authenticatedJoin + ` ORDER BY created_at DESC, t.value`
 
 	rows, err := s.db.QueryxContext(ctx, query, args.Values...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
+	var articlesCount uint
 	articles := []*entity.Article{}
 	var article *entity.Article
 	for rows.Next() {
 		articleRow := &ArticleRowWithTagAndUser{}
 		if err := rows.StructScan(articleRow); err != nil {
 			rows.Close()
-			return nil, err
+			return nil, 0, err
 		}
+		articlesCount = uint(articleRow.ArticlesCount)
 		if article == nil {
 			article = convertArticleRowWithTagAndUserToDomainArticle(articleRow)
-			if articleRow.SubscriberID != nil && params.UserID != nil {
-				article.Author.Following = *params.UserID == *articleRow.SubscriberID
+			if params.UserID != nil {
+				if articleRow.SubscriberID != nil {
+					article.Author.Following = *params.UserID == *articleRow.SubscriberID
+				}
+				if articleRow.FavoritedByID != nil {
+					article.Favorited = *params.UserID == *articleRow.FavoritedByID
+				}
 			}
 		} else if articleRow.ID == article.ID && articleRow.Tag.Valid {
 			article.TagList = append(article.TagList, articleRow.Tag.String)
 		} else {
 			articles = append(articles, article)
 			article = convertArticleRowWithTagAndUserToDomainArticle(articleRow)
-			if articleRow.SubscriberID != nil && params.UserID != nil {
-				article.Author.Following = *params.UserID == *articleRow.SubscriberID
+			if params.UserID != nil {
+				if articleRow.SubscriberID != nil {
+					article.Author.Following = *params.UserID == *articleRow.SubscriberID
+				}
+				if articleRow.FavoritedByID != nil {
+					article.Favorited = *params.UserID == *articleRow.FavoritedByID
+				}
 			}
 		}
 	}
@@ -282,8 +315,8 @@ func (s *Storage) SelectArticles(
 	}
 
 	if err := rows.Close(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return articles, nil
+	return articles, articlesCount, nil
 }

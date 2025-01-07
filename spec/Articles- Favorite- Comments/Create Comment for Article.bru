@@ -17,5 +17,13 @@ headers {
 }
 
 body:json {
-  {"comment":{"body":"Thank you so much!"}}
+  {
+    "comment": {
+      "body": "Thank you so much!"
+    }
+  }
+}
+
+script:post-response {
+  bru.setEnvVar("commentId", res.body.comment.id)
 }

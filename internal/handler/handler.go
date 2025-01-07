@@ -43,6 +43,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	m.Get("/api/articles", h.listArticle)
 	m.Get("/api/articles/{slug}", h.articleBySlug)
 	m.Get("/api/tags", h.listTags)
+	m.Get("/api/articles/{slug}/comments", h.listComments)
 
 	m.With(h.jwtMiddleware.HandleHTTP).
 		Group(func(r chi.Router) {
@@ -53,6 +54,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			r.Post("/api/articles", h.createArticle)
 			r.Put("/api/articles/{slug}", h.updateArticle)
 			r.Delete("/api/articles/{slug}", h.deleteArticle)
+			r.Post("/api/articles/{slug}/favorite", h.favoriteArticle)
+			r.Delete("/api/articles/{slug}/favorite", h.unfavoriteArticle)
+			r.Get("/api/articles/feed", h.feedArticles)
+			r.Post("/api/articles/{slug}/comments", h.createComment)
+			r.Delete("/api/articles/{slug}/comments/{id}", h.deleteComment)
 		})
 
 	m.ServeHTTP(w, r)

@@ -2,8 +2,6 @@ package entity
 
 import (
 	"time"
-
-	"github.com/guregu/null/v5"
 )
 
 type Article struct {
@@ -16,6 +14,6 @@ type Article struct {
 	Favorited      bool      `json:"favorited"`
 	FavoritesCount uint64    `json:"favoritesCount"`
 	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      null.Time `json:"updatedAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
 	Author         *Profile  `json:"author"`
 }

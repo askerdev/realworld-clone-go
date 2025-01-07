@@ -1,6 +1,8 @@
 package postgres
 
-import "github.com/askerdev/realworld-clone-go/internal/domain/entity"
+import (
+	"github.com/askerdev/realworld-clone-go/internal/domain/entity"
+)
 
 func convertArticleRowWithTagAndUserToDomainArticle(
 	articleRow *ArticleRowWithTagAndUser,
@@ -27,4 +29,19 @@ func convertArticleRowWithTagAndUserToDomainArticle(
 	}
 
 	return article
+}
+
+func convertCommentRowToComment(commentRow *CommentRow) *entity.Comment {
+	return &entity.Comment{
+		ID:   commentRow.ID,
+		Body: commentRow.Body,
+		Author: &entity.Profile{
+			ID:       commentRow.AuthorID,
+			Username: commentRow.UserUsername,
+			Bio:      commentRow.UserBio,
+			Image:    commentRow.UserImage,
+		},
+		CreatedAt: commentRow.CreatedAt,
+		UpdatedAt: commentRow.UpdatedAt,
+	}
 }

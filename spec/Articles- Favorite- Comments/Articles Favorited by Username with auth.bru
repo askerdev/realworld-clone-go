@@ -5,13 +5,13 @@ meta {
 }
 
 get {
-  url: {{APIURL}}/articles?favorited={{USERNAME}}
+  url: {{APIURL}}/articles?favorited=celeb_{{USERNAME}}
   body: json
   auth: none
 }
 
 params:query {
-  favorited: {{USERNAME}}
+  favorited: celeb_{{USERNAME}}
 }
 
 headers {
