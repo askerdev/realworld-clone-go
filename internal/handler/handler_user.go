@@ -8,7 +8,6 @@ import (
 
 	"github.com/askerdev/realworld-clone-go/internal/domain/vo"
 	"github.com/askerdev/realworld-clone-go/internal/postgres"
-	"github.com/go-chi/chi/v5"
 	"github.com/guregu/null/v5"
 )
 
@@ -207,7 +206,7 @@ func (h *handler) profile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	username := chi.URLParam(r, "username")
+	username := r.PathValue("username")
 	if username == "" {
 		NotFoundError(w)
 		return
@@ -232,7 +231,7 @@ func (h *handler) profile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) follow(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+	username := r.PathValue("username")
 	if username == "" {
 		NotFoundError(w)
 		return
@@ -267,7 +266,7 @@ func (h *handler) follow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) unfollow(w http.ResponseWriter, r *http.Request) {
-	username := chi.URLParam(r, "username")
+	username := r.PathValue("username")
 	if username == "" {
 		NotFoundError(w)
 		return

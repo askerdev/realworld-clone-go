@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/askerdev/realworld-clone-go/internal/postgres"
-	"github.com/go-chi/chi/v5"
 	"github.com/gosimple/slug"
 	"github.com/guregu/null/v5"
 )
@@ -168,7 +167,7 @@ func (h *handler) listArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) articleBySlug(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	if !slug.Valid {
@@ -222,7 +221,7 @@ type UpdateArticleRequest struct {
 }
 
 func (h *handler) updateArticle(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slugField := null.NewString(slugString, len(slugString) > 0)
 
 	var body UpdateArticleRequest
@@ -286,7 +285,7 @@ func (h *handler) updateArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) deleteArticle(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	if !slug.Valid {
@@ -314,7 +313,7 @@ func (h *handler) deleteArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) favoriteArticle(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	if !slug.Valid {
@@ -365,7 +364,7 @@ func (h *handler) favoriteArticle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) unfavoriteArticle(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	if !slug.Valid {

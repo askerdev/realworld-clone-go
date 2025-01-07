@@ -9,12 +9,11 @@ import (
 	"strconv"
 
 	"github.com/askerdev/realworld-clone-go/internal/postgres"
-	"github.com/go-chi/chi/v5"
 	"github.com/guregu/null/v5"
 )
 
 func (h *handler) listComments(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	if !slug.Valid {
@@ -64,7 +63,7 @@ type CreateCommentRequest struct {
 }
 
 func (h *handler) createComment(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	if !slug.Valid {
@@ -100,11 +99,11 @@ func (h *handler) createComment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) deleteComment(w http.ResponseWriter, r *http.Request) {
-	slugString := chi.URLParam(r, "slug")
+	slugString := r.PathValue("slug")
 	slug := null.NewString(slugString, len(slugString) > 0)
 
 	var commentID null.Int
-	commentIDString := chi.URLParam(r, "id")
+	commentIDString := r.PathValue("id")
 	if len(commentIDString) > 0 {
 		commentIDInt, err := strconv.Atoi(commentIDString)
 		fmt.Println(err)
