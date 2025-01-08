@@ -10,10 +10,11 @@ import (
 )
 
 type Issuer struct {
-	key crypto.PrivateKey
+	key   crypto.PrivateKey
+	cache Cache
 }
 
-func NewIssuer(privateKeyPath string) (*Issuer, error) {
+func NewIssuer(privateKeyPath string, cache Cache) (*Issuer, error) {
 	keyBytes, err := os.ReadFile(privateKeyPath)
 	if err != nil {
 		panic(fmt.Errorf("unable to read private key file: %w", err))
@@ -25,11 +26,12 @@ func NewIssuer(privateKeyPath string) (*Issuer, error) {
 	}
 
 	return &Issuer{
-		key: key,
+		key:   key,
+		cache: cache,
 	}, nil
 }
 
-func (i *Issuer) Token(data any) (string, error) {
+func (i *Issuer) Token(authID uint64, data any) (string, error) {
 	now := time.Now()
 	token := jwt.NewWithClaims(&jwt.SigningMethodEd25519{}, jwt.MapClaims{
 		"aud": "api",
@@ -43,6 +45,11 @@ func (i *Issuer) Token(data any) (string, error) {
 	tokenString, err := token.SignedString(i.key)
 	if err != nil {
 		return "", fmt.Errorf("unable to sign token: %w", err)
+	}
+
+	err = i.cache.Set(authID, now)
+	if err != nil {
+		return "", err
 	}
 
 	return tokenString, nil

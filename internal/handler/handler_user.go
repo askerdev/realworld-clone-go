@@ -125,7 +125,7 @@ func (h *handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.issuer.Token(u)
+	token, err := h.issuer.Token(u.ID, u)
 	if err != nil {
 		InternalServerError(w)
 		return

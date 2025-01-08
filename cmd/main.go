@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/askerdev/realworld-clone-go/internal/handler"
+	"github.com/askerdev/realworld-clone-go/internal/mem"
 	"github.com/askerdev/realworld-clone-go/pkg/simplejwt"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -20,13 +21,15 @@ import (
 func main() {
 	privateKeyPath, publicKeyPath := os.Args[1], os.Args[2]
 
-	issuer, err := simplejwt.NewIssuer(privateKeyPath)
+	jwtCache := mem.NewJWTCache()
+
+	issuer, err := simplejwt.NewIssuer(privateKeyPath, jwtCache)
 	if err != nil {
 		slog.Error(err.Error())
 		return
 	}
 
-	validator, err := simplejwt.NewValidator(publicKeyPath)
+	validator, err := simplejwt.NewValidator(publicKeyPath, jwtCache)
 	if err != nil {
 		slog.Error(err.Error())
 		return

@@ -2,6 +2,7 @@ package simplejwt
 
 import (
 	"crypto"
+	"errors"
 	"fmt"
 	"os"
 
@@ -9,10 +10,11 @@ import (
 )
 
 type Validator struct {
-	key crypto.PublicKey
+	key   crypto.PublicKey
+	cache Cache
 }
 
-func NewValidator(publicKeyPath string) (*Validator, error) {
+func NewValidator(publicKeyPath string, cache Cache) (*Validator, error) {
 	keyBytes, err := os.ReadFile(publicKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read public key file: %w", err)
@@ -24,7 +26,8 @@ func NewValidator(publicKeyPath string) (*Validator, error) {
 	}
 
 	return &Validator{
-		key: key,
+		key:   key,
+		cache: cache,
 	}, nil
 }
 
@@ -39,6 +42,30 @@ func (v *Validator) Validate(tokenString string) (*jwt.Token, error) {
 		})
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse token string: %w", err)
+	}
+
+	iAt, err := token.Claims.GetIssuedAt()
+	if err != nil {
+		return nil, err
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	sub, ok := claims["sub"].(map[string]any)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+	id, ok := sub["id"].(float64)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+
+	prevIAt, ok := v.cache.Get(uint64(id))
+	if !ok {
+		return nil, errors.New("invalid iat")
+	}
+
+	if iAt.Unix() < prevIAt.Unix() {
+		return nil, errors.New("invalid iat")
 	}
 
 	return token, nil
