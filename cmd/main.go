@@ -14,8 +14,8 @@ import (
 	"github.com/askerdev/realworld-clone-go/internal/handler"
 	"github.com/askerdev/realworld-clone-go/internal/mem"
 	"github.com/askerdev/realworld-clone-go/pkg/simplejwt"
+	_ "github.com/jackc/pgx/stdlib"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	db, err := sqlx.Connect("postgres", os.Getenv("POSTGRES_URL"))
+	db, err := sqlx.Connect("pgx", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		slog.Error(err.Error())
 		return

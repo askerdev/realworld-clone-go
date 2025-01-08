@@ -89,7 +89,6 @@ func (r *Storage) UnfollowProfile(
     DELETE FROM subscriptions
     WHERE user_id = $1 AND profile_id = $2`
 	const selectProfileByUsernameQuery = `SELECT id, username, image, bio FROM users WHERE username = $1`
-	const selectSubscription = `SELECT * FROM subscriptions WHERE user_id = $1 AND profile_id = $2`
 
 	tx, err := r.db.BeginTxx(ctx, &sql.TxOptions{})
 	if err != nil {
