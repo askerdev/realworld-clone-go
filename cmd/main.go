@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	db, err := sqlx.Connect("pgx", os.Getenv("POSTGRES_URL"))
+	db, err := sqlx.Connect("pgx", "postgresql://test:test@localhost:5432/test?sslmode=disable")
 	if err != nil {
 		slog.Error(err.Error())
 		return
